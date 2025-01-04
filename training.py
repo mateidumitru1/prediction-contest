@@ -12,6 +12,9 @@ from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import StratifiedKFold
 import joblib
 
+EPOCHS = 30
+BATCH_SIZE = 16
+
 def train_model(df_train, text_column, label_column, model_path, tokenizer_path, max_vocab_size=10000, max_sequence_length=100, embedding_dim=128):
     print("Encoding labels...")
     label_encoder = LabelEncoder()
@@ -35,7 +38,7 @@ def train_model(df_train, text_column, label_column, model_path, tokenizer_path,
         Dense(len(label_encoder.classes_), activation='softmax')
     ])
 
-    decay_steps = len(X_train_padded) * 30 // 16
+    decay_steps = len(X_train_padded) * EPOCHS // BATCH_SIZE
     lr_schedule = CosineDecay(initial_learning_rate=0.001, decay_steps=decay_steps, alpha=0.1)
     optimizer = Adam(learning_rate=lr_schedule)
     model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
@@ -55,7 +58,7 @@ def train_model(df_train, text_column, label_column, model_path, tokenizer_path,
         model.fit(
             X_train_fold, y_train_fold,
             validation_data=(X_val, y_val),
-            batch_size=16, epochs=30,
+            batch_size=BATCH_SIZE, epochs=EPOCHS,
             class_weight=class_weight_dict,
             callbacks=[early_stopping, model_checkpoint]
         )
